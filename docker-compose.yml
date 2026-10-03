@@ -1,8 +1,7 @@
 services:
   telegram-bot-api:
-    # NOTE: the daemon runs as uid 101 and creates 750 dirs; host access for
-    # tg-mpv-bot comes from default ACLs on ~/telegram-bot-api-data (see that
-    # repo's README) — the entrypoint must stay root, user: breaks it.
+    # The Local Bot API server writes its local download data under this host
+    # directory. Keep the container entrypoint as provided by the image.
     image: aiogram/telegram-bot-api:latest
     environment:
       TELEGRAM_API_ID: ${TELEGRAM_API_ID}
@@ -10,8 +9,7 @@ services:
       TELEGRAM_LOCAL: "true"
     volumes:
       # Host bind (not a named volume): in TELEGRAM_LOCAL mode the server
-      # returns filesystem paths, and tg-mpv-bot (running on the host) reads
-      # downloaded files straight from this directory.
+      # returns filesystem paths for the local Bot API runtime.
       - ~/telegram-bot-api-data:/var/lib/telegram-bot-api
     ports:
       # Host port is configurable (8081 is often already taken); the bot reaches
