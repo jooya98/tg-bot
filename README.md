@@ -1,160 +1,181 @@
-# tg-media-bot
+# tgBot
 
-[![CI](https://github.com/antlis/tg-media-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/antlis/tg-media-bot/actions/workflows/ci.yml)
+[![CI](https://github.com/jooya98/tg-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/jooya98/tg-bot/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 
-![Demo](assets/demo.gif)
+> **Project status: Phase 0 — Bootstrap / Project Definition**
+>
+> This repository is intentionally not being developed as a finished product yet. Phase 0 establishes the project direction, preserves a proven downloader/Telegram runtime, and records the architecture we intend to build on top of it. See [docs/PHASE_0.md](docs/PHASE_0.md).
 
-A lightweight, self-hosted Telegram media downloader bot built with Python.
+## What tgBot is
 
-**🌐 [Website & overview](https://antlis.is-a.dev/tg-media-bot/)**
+tgBot is the foundation for an adaptive Telegram crawler/downloader.
 
-## Overview
+The long-term goal is not simply to make a bot that downloads a URL. The goal is to build a system that can **discover, resolve, acquire and deliver media according to what users actually ask for**, while using Telegram itself as a highly economical delivery and cache layer.
 
-This bot downloads media from 1000+ platforms using yt-dlp and uploads the files back to Telegram. It's designed for homelab usage with minimal resource consumption and no external dependencies beyond yt-dlp and ffmpeg.
+The core economic idea:
 
-**Key Characteristics:**
-- Pure utility bot - no AI, no LLM calls
-- Async architecture using aiogram 3.x
-- Access control via an allowlist of Telegram user IDs
-- Per-user rate limiting
-- Automatic temporary file cleanup
-- Live download progress bar that updates in place (works the same in DMs and groups)
-- Instant re-sends: a previously downloaded URL is resent from Telegram's cache (by `file_id`) without re-downloading
-- Friendly, actionable error messages (e.g. "age-restricted — set a COOKIES_FILE")
-- yt-dlp kept current automatically in Docker (refreshed on container start)
-- Uploads up to 2GB via a bundled local Telegram Bot API server (vs. 50MB on the standard API)
-- Audio-only sources (e.g. SoundCloud) are auto-detected and always fetched as tagged MP3
-- Direct media URLs (e.g. an imageboard `.webm`) are transcoded to a streamable MP4 (H.264/AAC, `moov` at the start) so Telegram plays them inline instead of attaching as a file
-- Audio results are a single post: MP3 with embedded cover art, album-art thumbnail, and title/artist/duration
-- Each result post shows the original source URL as plain (non-linked) text
-- Authenticated downloads via browser cookies (bare Python) or a mounted `cookies.txt` (Docker)
-- Handles split video+audio sources (HLS/DASH) that have no single muxed stream
-- Optional headless-browser fallback: when no yt-dlp extractor can handle a page whose player builds the media URL in JavaScript, the page is loaded in headless Chromium, the media request is captured, and that URL is handed back to yt-dlp
-- Unit-tested with pytest
+    User request
+        ↓
+    Search / Intent
+        ↓
+    Resolver
+        ↓
+    Crawler / Acquisition
+        ↓
+    Media Object
+        ↓
+    Telegram
+        ↓
+    file_id
+        ↓
+    Reusable Telegram-side cache
 
-## Project Structure
+Once a media object has been uploaded to Telegram, subsequent deliveries can reuse its Telegram file_id instead of downloading and uploading the same object again. Our infrastructure therefore spends resources primarily on discovery, acquisition, processing and orchestration rather than permanently storing a growing media library.
 
-```
-tg-media-bot/
-├── main.py              # Entry point: builds Bot/Dispatcher, starts polling
-├── docker-compose.yml   # Bot + local Telegram Bot API server
-├── Dockerfile           # Bot image (installs ffmpeg + yt-dlp)
-├── flake.nix            # Nix package, dev shell, checks (see packaging/nix/)
-├── requirements.txt     # Python dependencies
-├── .env.example         # Configuration template
-├── src/
-│   ├── bot/
-│   │   ├── handlers.py  # URL extraction, download/upload orchestration
-│   │   └── router.py    # Dispatcher, command routing, auth middleware
-│   ├── commands/
-│   │   └── handlers.py  # /start, /help, /audio, /video, /status, /minimal, /topic, etc.
-│   ├── config/
-│   │   └── settings.py  # Env-based settings (singleton)
-│   ├── downloaders/
-│   │   └── ytdlp.py     # yt-dlp subprocess wrapper
-│   ├── queue/
-│   │   └── manager.py   # Async queue + per-user rate limiting
-│   ├── services/
-│   │   ├── chat_store.py    # Persistent group-chat allowlist
-│   │   ├── cleanup.py       # Temp file cleanup
-│   │   ├── media_cache.py   # file_id cache for instant resends
-│   │   ├── minimal_store.py # Per-chat minimal-UI toggle
-│   │   ├── topic_lock.py    # Per-chat forum-topic restriction
-│   │   └── uploader.py      # Telegram upload (video/audio/document)
-│   ├── types/
-│   │   └── download.py  # DownloadTask, DownloadStatus, MediaFormat
-│   └── utils/
-│       ├── logger.py    # Structured logging
-│       └── sanitizer.py # Filename sanitization
-├── packaging/           # aur/ (PKGBUILD + unit), nix/ (package + home-manager module)
-└── tests/               # pytest suite (see Testing)
-```
+Telegram file_id is a delivery/cache reference, not canonical content identity. A future catalog must own the identity of the media object so the same content can be recognized across URLs, sources and representations.
 
-## Quick Start (Docker — recommended)
+## Why this repository is the base
 
-Running via Docker Compose brings up the bot **and** a local Telegram Bot API server, which raises the upload limit from 50MB to 2GB.
+This repository was forked from [antlis/tg-media-bot](https://github.com/antlis/tg-media-bot), which already provides a useful operational runtime:
 
-### 1. Get Telegram credentials
+- Telegram bot integration with aiogram
+- Local Telegram Bot API support for large uploads
+- yt-dlp based acquisition
+- optional headless-browser fallback
+- ffmpeg processing
+- asynchronous download queue and concurrency limits
+- progress reporting and cancellation
+- Telegram file_id reuse
+- flood-control retry handling
+- temporary-file cleanup
+- cookies/authenticated downloads
+- Docker and Nix packaging
+- tests
 
-- **Bot token** from [@BotFather](https://t.me/BotFather) (`/newbot`).
-- **API ID + API hash** from [my.telegram.org/apps](https://my.telegram.org/apps) (needed by the local Bot API server).
+These are expensive integration details to rebuild and are therefore retained as the runtime foundation.
 
-### 2. Configure
+The product layer we intend to add is different: **search, resolution, crawling strategy, canonical media identity, source selection, adaptive acquisition and reusable delivery.**
 
-```bash
-cp .env.example .env
-nano .env
-```
+## Phase 0 boundary
 
-Set at minimum `BOT_TOKEN`, `TELEGRAM_API_ID`, `TELEGRAM_API_HASH`, and `ALLOWED_USERS`.
+Phase 0 is deliberately small.
 
-### 3. Run
+### Done in Phase 0
 
-```bash
-docker compose up -d         # pulls the prebuilt image from GHCR
-docker compose logs -f bot
-```
+1. Fork the upstream project into this repository as tgBot.
+2. Replace the upstream project definition with our own project definition.
+3. Document the economic and architectural role of Telegram file_id caching.
+4. Record the intended separation between user intent/search, source resolution, acquisition/crawling, canonical media identity, representation/format, and Telegram delivery/cache.
+5. Audit related open-source projects for ideas worth borrowing later:
+   - [tanscope](https://github.com/tantaneity/tanscope)
+   - [telegram-movie-search-bot](https://github.com/ScripterSaurav/telegram-movie-search-bot)
+   - [ytdl_tg_bot](https://github.com/Desiders/ytdl_tg_bot)
+6. Keep useful architectural ideas without importing unrelated deployment complexity.
+7. Make the fork self-identifying as tgBot rather than depending on the upstream prebuilt image.
 
-`docker-compose.yml` references the published image `ghcr.io/antlis/tg-media-bot:latest`, so no local build is needed. To build from source instead (e.g. for unreleased changes), use `docker compose up -d --build`.
+### Explicitly not done in Phase 0
 
-To stop: `docker compose down`.
+- no universal media search engine
+- no movie/series catalog
+- no crawler fleet
+- no new source-scraping system
+- no durable distributed queue
+- no PostgreSQL migration
+- no remote downloader cluster
+- no recommendation/ranking engine
+- no monetization layer
+- no production-scale deployment work
 
-> **Port note:** the local Bot API server publishes on host port `8082` (`8082:8081` in `docker-compose.yml`). The bot reaches it over the internal Compose network as `http://telegram-bot-api:8081`, so the host port only matters if another service already occupies `8081`. Adjust if `8082` is also taken.
+Phase 0 is a **prepared foundation**, not the first product-development sprint.
 
-## Quick Start (bare Python)
+## Architectural direction
 
-This path uses the **standard** Telegram Bot API (50MB upload limit) and supports Firefox cookies.
+Current runtime:
 
-```bash
-# System packages (Arch)
-sudo pacman -S yt-dlp ffmpeg
+    Telegram message
+        ↓
+    URL extraction
+        ↓
+    download queue
+        ↓
+    yt-dlp
+        ↓
+    Telegram upload
+        ↓
+    file_id cache
 
-# Python deps
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
+Target direction:
 
-# Configure
-cp .env.example .env   # set BOT_TOKEN, ALLOWED_USERS
+    Telegram / future interfaces
+            ↓
+      User Intent / Search
+            ↓
+          Resolver
+            ↓
+    Acquisition Orchestrator
+        ↙       ↓       ↘
+    direct HTTP  yt-dlp  source-specific adapters
+            ↓
+       Canonical Media
+            ↓
+      Representation
+            ↓
+     Telegram Delivery
+            ↓
+      Telegram file_id
+            ↓
+       Delivery Cache
 
-# Run
-python main.py
-```
+The important boundary is that **Telegram is a delivery/cache backend, not the canonical media database**.
 
-See [Installation Guide](INSTALLATION.md) for systemd service setup and Firefox cookie configuration.
+Future conceptual model:
 
-## Install on Arch (AUR)
+    MediaObject
+      ├── identity
+      ├── metadata
+      ├── source(s)
+      └── representations
+            ├── video 1080p
+            ├── video 720p
+            ├── audio mp3
+            └── ...
 
-Arch users can install a packaged build with a systemd service:
+    Representation
+      └── TelegramFile
+            ├── file_id
+            ├── media kind
+            └── Telegram-specific metadata
 
-```bash
-paru -S tg-media-bot          # or: yay -S tg-media-bot
-sudoedit /etc/tg-media-bot/.env   # set BOT_TOKEN, ALLOWED_USERS
-sudo systemctl enable --now tg-media-bot
-```
+## Reference projects
 
-Packaging files and publishing notes live in [`packaging/aur/`](packaging/aur/).
+### tanscope
 
-## Install with Nix
+Useful patterns include multiple acquisition engines behind one interface, search-result caching, Telegram file_id reuse, operational statistics, concurrency control, and discovery separated from acquisition.
 
-```bash
-nix run github:antlis/tg-media-bot        # BOT_TOKEN etc. from the environment
-nix build .#with-browser                  # + headless-Chromium fallback (large)
-nix develop                               # dev shell with deps + pytest
-```
+**Decision:** borrow the architectural ideas later; do not transplant the application wholesale.
 
-`yt-dlp` and `ffmpeg` are put on the bot's `PATH` by the wrapper; yt-dlp comes
-from nixpkgs, so bump it with `nix flake update`. For home-manager, import
-`homeManagerModules.default` and enable `services.tg-media-bot` — it runs a user
-service, keeps state under `~/.local/state/tg-media-bot`, and reads `BOT_TOKEN`
-from `environmentFile` (extra env vars go in `settings`). `nix flake check`
-builds the package and runs the test suite.
+### telegram-movie-search-bot
 
-The local Bot API server (2 GB uploads) is a separate service — keep it in the
-compose file (`docker compose up -d telegram-bot-api`) or run nixpkgs'
-`telegram-bot-api`, then set `API_SERVER_URL`. Don't run the Docker `bot` and
-the Nix bot at once — they'd poll the same token.
+The useful pattern is a Telegram-native media index: index media already present in Telegram, store searchable metadata, and return existing Telegram files instead of acquiring them again.
+
+**Decision:** this is a reference for a future Telegram-native catalog/index adapter. Its older database and deployment model are not adopted as tgBot's core architecture.
+
+### ytdl_tg_bot
+
+Useful patterns include durable download jobs, downloader-worker separation, cached Telegram resends, a downloader-client boundary, and multiple downloader nodes.
+
+**Decision:** reserve these for a later scaling phase. Do not introduce its Kubernetes/operator/database stack during Phase 0.
+
+## Phase 0 principle
+
+**Preserve proven machinery, document the target architecture, and postpone irreversible complexity until actual demand tells us where it is needed.**
+
+## Runtime documentation inherited from the base
+
+The operational documentation below remains relevant to the existing downloader runtime. Search/resolution and the new catalog are future product work.
+
+---
 
 ## Configuration
 
