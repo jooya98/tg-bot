@@ -1,5 +1,5 @@
 {
-  description = "tg-media-bot — self-hosted Telegram media downloader (yt-dlp + aiogram)";
+  description = "tgBot — adaptive Telegram crawler/downloader foundation (yt-dlp + aiogram)";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
@@ -14,13 +14,13 @@
     in
     {
       packages = forAll (pkgs: rec {
-        tg-media-bot = pkgs.callPackage ./packaging/nix/package.nix { };
-        with-browser = tg-media-bot.override { withBrowser = true; };
-        default = tg-media-bot;
+        tgBot = pkgs.callPackage ./packaging/nix/package.nix { };
+        with-browser = tgBot.override { withBrowser = true; };
+        default = tgBot;
       });
 
       overlays.default = final: _prev: {
-        tg-media-bot = final.callPackage ./packaging/nix/package.nix { };
+        tgBot = final.callPackage ./packaging/nix/package.nix { };
       };
 
       homeManagerModules.default = import ./packaging/nix/home-manager.nix self;
@@ -49,7 +49,7 @@
         package = self.packages.${pkgs.stdenv.hostPlatform.system}.default;
         # The same suite CI runs with pip, against the Nix-provided deps.
         tests =
-          pkgs.runCommand "tg-media-bot-tests"
+          pkgs.runCommand "tgBot-tests"
             {
               nativeBuildInputs = [
                 (pkgs.python3.withPackages (
