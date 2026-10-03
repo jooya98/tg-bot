@@ -57,7 +57,7 @@ stdenv.mkDerivation {
 
   meta = {
     description = "Adaptive Telegram crawler/downloader foundation (yt-dlp + aiogram)";
-    homepage = "https://github.com/antlis/tgBot";
+    homepage = "https://github.com/jooya98/tg-bot";
     license = lib.licenses.mit;
     mainProgram = "tgBot";
     platforms = lib.platforms.linux;
