@@ -23,7 +23,7 @@ let
   );
 in
 stdenv.mkDerivation {
-  pname = "tg-media-bot";
+  pname = "tgBot";
   # Keep in sync with the release tag (and packaging/aur/PKGBUILD).
   version = "0.6.0";
 
@@ -40,10 +40,10 @@ stdenv.mkDerivation {
 
   installPhase = ''
     runHook preInstall
-    mkdir -p $out/share/tg-media-bot
-    cp -r main.py src $out/share/tg-media-bot/
-    makeWrapper ${pythonEnv.interpreter} $out/bin/tg-media-bot \
-      --add-flags $out/share/tg-media-bot/main.py \
+    mkdir -p $out/share/tgBot
+    cp -r main.py src $out/share/tgBot/
+    makeWrapper ${pythonEnv.interpreter} $out/bin/tgBot \
+      --add-flags $out/share/tgBot/main.py \
       --prefix PATH : ${
         lib.makeBinPath [
           yt-dlp
@@ -56,10 +56,10 @@ stdenv.mkDerivation {
   '';
 
   meta = {
-    description = "Self-hosted Telegram media downloader bot (yt-dlp + aiogram)";
-    homepage = "https://github.com/antlis/tg-media-bot";
+    description = "Adaptive Telegram crawler/downloader foundation (yt-dlp + aiogram)";
+    homepage = "https://github.com/antlis/tgBot";
     license = lib.licenses.mit;
-    mainProgram = "tg-media-bot";
+    mainProgram = "tgBot";
     platforms = lib.platforms.linux;
   };
 }
