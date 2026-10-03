@@ -2,24 +2,24 @@ self:
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.services.tg-media-bot;
+  cfg = config.services.tgBot;
   inherit (lib) mkEnableOption mkOption mkIf types;
-  state = "%S/tg-media-bot";
+  state = "%S/tgBot";
 in
 {
-  options.services.tg-media-bot = {
-    enable = mkEnableOption "tg-media-bot, a Telegram media downloader";
+  options.services.tgBot = {
+    enable = mkEnableOption "tgBot, a adaptive Telegram crawler/downloader";
 
     package = mkOption {
       type = types.package;
       default = self.packages.${pkgs.stdenv.hostPlatform.system}.default;
-      defaultText = "tg-media-bot flake package";
+      defaultText = "tgBot flake package";
     };
 
     environmentFile = mkOption {
       type = types.nullOr types.str;
       default = null;
-      example = "/home/me/.config/tg-media-bot.env";
+      example = "/home/me/.config/tgBot.env";
       description = ''
         File with BOT_TOKEN (and optionally ALLOWED_USERS, API_SERVER_URL, …),
         kept out of the Nix store. Pass it as a string, not a Nix path literal.
@@ -38,9 +38,9 @@ in
   };
 
   config = mkIf cfg.enable {
-    systemd.user.services.tg-media-bot = {
+    systemd.user.services.tgBot = {
       Unit = {
-        Description = "tg-media-bot — Telegram media downloader";
+        Description = "tgBot — Telegram media downloader";
         After = [ "network-online.target" ];
         Wants = [ "network-online.target" ];
       };
@@ -48,11 +48,11 @@ in
         ExecStart = lib.getExe cfg.package;
         Restart = "on-failure";
         RestartSec = 5;
-        # ~/.local/state/tg-media-bot — allowlist, media cache, log, …
-        StateDirectory = "tg-media-bot";
+        # ~/.local/state/tgBot — allowlist, media cache, log, …
+        StateDirectory = "tgBot";
         Environment = lib.mapAttrsToList (k: v: "${k}=${v}") (
           {
-            LOG_FILE = "${state}/tg-media-bot.log";
+            LOG_FILE = "${state}/tgBot.log";
             ALLOWED_CHATS_FILE = "${state}/allowed_chats.json";
             MEDIA_CACHE_FILE = "${state}/media_cache.json";
             MINIMAL_MODE_FILE = "${state}/minimal_mode.json";
