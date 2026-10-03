@@ -28,9 +28,8 @@ services:
       start_period: 15s
 
   bot:
-    # `docker compose up` pulls the prebuilt image; `up --build` builds from
-    # this checkout instead (for local development / unreleased changes).
-    image: ghcr.io/antlis/tg-media-bot:latest
+    # Phase 0: build the tgBot image from this checkout. Do not consume the
+    # upstream tg-media-bot image as our runtime artifact.
     build:
       context: .
       args:
